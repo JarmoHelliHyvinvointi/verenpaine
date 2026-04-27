@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verenpaineen seuranta PRO</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root { --primary: #2c3e50; --danger: #e74c3c; --success: #27ae60; --info: #9b59b6; --gray: #95a5a6; }
+        body { font-family: -apple-system, sans-serif; max-width: 900px; margin: auto; padding: 20px; background: #f0f2f5; color: #333; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .input-group { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 15px; }
+        input, select { padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; width: 100%; box-sizing: border-box; }
+        button { background: var(--primary); color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .sync-card { background: #e8f4fd; border-left: 5px solid #3498db; }
+        .del-btn { background: none; color: var(--danger); border: none; cursor: pointer; font-size: 1.2em; }
+        .no-print { display: block; }
+        @media print { .no-print { display: none !important; } .card { box-shadow: none; border: none; padding: 0; } }
+    </style>
+</head>
+<body>
+
+    <div class="no-print">
+        <h2>🩸 Verenpaineen seuranta</h2>
+        
+        <div class="card sync-card">
+            <h3>Pilvitallennus (GitHub)</h3>
+            <div class="input-group">
+                <input type="password" id="ghToken" placeholder="GitHub Personal Access Token">
+                <input type="text" id="ghRepo" placeholder="Käyttäjänimi/Arkisto (esim. meikä/verenpaine)">
+            </div>
+            <div style="display:flex; gap: 10px;">
+                <button onclick="fetchFromGitHub()" style="background: var(--info);">Hae tiedot pilvestä</button>
+                <button onclick="syncToGitHub()" style="background: var(--success);">Vie tiedot pilveen</button>
+            </div>
+            <p id="syncStatus" style="font-size: 0.8em; margin-top: 10px;"></p>
+        </div>
+
+        <div class="card">
+            <h3>Uusi mittaus</h3>
+            <div class="input-group">
+                <input type="date" id="mDate">
+                <select id="timeOfDay">
+                    <option value="Aamu">Aamu (pallo)</option>
+                    <option value="Ilta">Ilta (neliö)</option>
+                </select>
+                <input type="number" id="sys" placeholder="SYS">
+                <input type="number" id="dia" placeholder="DIA">
+                <input type="number" id="pulse" placeholder="Syke">
+            </div>
+            <button onclick="addEntry()" style="width: 100%;">Tallenna paikallisesti</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <canvas id="bpChart" style="max-height: 350px;"></canvas>
+    </div>
+    
+    <div class="card">
+        <table id="historyTable" style="width:100%; border-collapse: collapse;">
+            <thead><tr style="text-align: left; border-bottom: 2px solid #eee;"><th>Pvm</th><th>Aika</th><th>SYS</th><th>DIA</th><th>Syke</th><th></th></tr></thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+<script>
+    let measurements = JSON.parse(localStorage.getItem('bp_data')) || [];
+    let chart;
+
+    // Alustukset
+    document.getElementById('mDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('ghToken').value = localStorage.getItem('gh_token') || '';
+    document.getElementById('ghRepo').value = localStorage.getItem('gh_repo') || '';
+
+    function addEntry() {
+        const entry = {
+            id: Date.now(),
+            date: document.getElementById('mDate').value,
+            time: document.getElementById('timeOfDay').value,
+            sys: parseInt(document.getElementById('sys').value),
+            dia: parseInt(document.getElementById('dia').value),
+            pulse: parseInt(document.getElementById('pulse').value) || 0,
+            sortKey: document.getElementById('mDate').value + (document.getElementById('timeOfDay').value === 'Aamu' ? '0' : '1')
+        };
+        if(!entry.sys || !entry.dia) return alert("Syötä arvot!");
+        measurements.push(entry);
+        measurements.sort((a,b) => a.sortKey.localeCompare(b.sortKey));
+        saveLocal();
+    }
+
+    function saveLocal() {
+        localStorage.setItem('bp_data', JSON.stringify(measurements));
+        updateUI();
+    }
+
+    function deleteEntry(id) {
+        if(confirm("Poistetaanko?")) {
+            measurements = measurements.filter(m => m.id !== id);
+            saveLocal();
+        }
+    }
+
+    // --- GITHUB SYNKRONOINTI ---
+    async function syncToGitHub() {
+        const token = document.getElementById('ghToken').value;
+        const repo = document.getElementById('ghRepo').value;
+        if(!token || !repo) return alert("Aseta Token ja Repo ensin!");
+        
+        localStorage.setItem('gh_token', token);
+        localStorage.setItem('gh_repo', repo);
+
+        const url = `https://api.github.com/repos/${repo}/contents/data.json`;
+        const status = document.getElementById('syncStatus');
+        status.innerText = "Synkronoidaan...";
+
+        try {
+            let sha;
+            const getRes = await fetch(url, { headers: { 'Authorization': `token ${token}` } });
+            if(getRes.ok) {
+                const getData = await getRes.json();
+                sha = getData.sha;
+            }
+
+            const content = btoa(JSON.stringify(measurements, null, 2));
+            const putRes = await fetch(url, {
+                method: 'PUT',
+                headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: "Update BP data", content: content, sha: sha })
+            });
+
+            if(putRes.ok) status.innerText = "✅ Onnistui! Tiedot tallennettu GitHubiin.";
+            else status.innerText = "❌ Virhe tallennuksessa.";
+        } catch (e) {
+            status.innerText = "❌ Yhteysvirhe.";
+        }
+    }
+
+    async function fetchFromGitHub() {
+        const token = document.getElementById('ghToken').value;
+        const repo = document.getElementById('ghRepo').value;
+        const url = `https://api.github.com/repos/${repo}/contents/data.json`;
+        
+        try {
+            const res = await fetch(url, { headers: { 'Authorization': `token ${token}` } });
+            if(res.ok) {
+                const data = await res.json();
+                measurements = JSON.parse(atob(data.content));
+                saveLocal();
+                document.getElementById('syncStatus').innerText = "✅ Tiedot haettu pilvestä!";
+            }
+        } catch (e) { alert("Haku epäonnistui."); }
+    }
+
+    function updateUI() {
+        const tbody = document.querySelector('#historyTable tbody');
+        tbody.innerHTML = measurements.slice().reverse().map(m => `
+            <tr style="border-bottom: 1px solid #eee;">
+                <td>${m.date}</td><td>${m.time}</td><td>${m.sys}</td><td>${m.dia}</td><td>${m.pulse}</td>
+                <td><button class="del-btn" onclick="deleteEntry(${m.id})">🗑️</button></td>
+            </tr>
+        `).join('');
+        renderChart(measurements);
+    }
+
+    function renderChart(data) {
+        const ctx = document.getElementById('bpChart').getContext('2d');
+        if (chart) chart.destroy();
+        chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.map(m => m.date + ` (${m.time[0]})`),
+                datasets: [
+                    { label: 'SYS', data: data.map(m => m.sys), borderColor: '#e74c3c', pointStyle: data.map(m => m.time === 'Aamu' ? 'circle' : 'rect'), tension: 0.1 },
+                    { label: 'DIA', data: data.map(m => m.dia), borderColor: '#3498db', pointStyle: data.map(m => m.time === 'Aamu' ? 'circle' : 'rect'), tension: 0.1 }
+                ]
+            }
+        });
+    }
+    updateUI();
+</script>
+</body>
+</html>
