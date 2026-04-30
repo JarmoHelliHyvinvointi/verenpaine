@@ -129,5 +129,15 @@
     "pulse": 71,
     "note": "Omron koti M10-IT mittari",
     "sortKey": "2026-04-300"
+  },
+  {
+    "id": 1777582608572,
+    "date": "2026-04-30",
+    "time": "Ilta",
+    "sys": 113,
+    "dia": 74,
+    "pulse": 73,
+    "note": "mökki Omron",
+    "sortKey": "2026-04-301"
   }
 ]
