@@ -109,5 +109,25 @@
     "pulse": 72,
     "note": "",
     "sortKey": "2026-04-300"
+  },
+  {
+    "id": 1777529019025,
+    "date": "2026-04-30",
+    "time": "Aamu",
+    "sys": 106,
+    "dia": 70,
+    "pulse": 77,
+    "note": "Omron mökki mittari",
+    "sortKey": "2026-04-300"
+  },
+  {
+    "id": 1777529304744,
+    "date": "2026-04-30",
+    "time": "Aamu",
+    "sys": 103,
+    "dia": 71,
+    "pulse": 71,
+    "note": "Omron koti M10-IT mittari",
+    "sortKey": "2026-04-300"
   }
 ]
