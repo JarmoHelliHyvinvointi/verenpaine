@@ -179,5 +179,15 @@
     "pulse": 74,
     "note": "Mökki Omron ",
     "sortKey": "2026-05-030"
+  },
+  {
+    "id": 1777836377061,
+    "date": "2026-05-03",
+    "time": "Ilta",
+    "sys": 104,
+    "dia": 72,
+    "pulse": 61,
+    "note": "",
+    "sortKey": "2026-05-031"
   }
 ]
