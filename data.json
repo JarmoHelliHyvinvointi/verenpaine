@@ -169,5 +169,15 @@
     "pulse": 65,
     "note": "Mökki Omron ",
     "sortKey": "2026-05-021"
+  },
+  {
+    "id": 1777785748299,
+    "date": "2026-05-03",
+    "time": "Aamu",
+    "sys": 112,
+    "dia": 84,
+    "pulse": 74,
+    "note": "Mökki Omron ",
+    "sortKey": "2026-05-030"
   }
 ]
