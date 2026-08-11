@@ -439,5 +439,15 @@
     "pulse": 84,
     "note": "",
     "sortKey": "2026-07-230"
+  },
+  {
+    "id": 1786440770239,
+    "date": "2026-08-11",
+    "time": "Ilta",
+    "sys": 102,
+    "dia": 70,
+    "pulse": 82,
+    "note": "Kello 12:30 otettu",
+    "sortKey": "2026-08-111"
   }
 ]
