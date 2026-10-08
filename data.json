@@ -549,5 +549,15 @@
     "pulse": 67,
     "note": "Sappirakon poiston jälkeen toisena päivänä",
     "sortKey": "2026-10-030"
+  },
+  {
+    "id": 1791440113822,
+    "date": "2026-10-08",
+    "time": "Aamu",
+    "sys": 111,
+    "dia": 87,
+    "pulse": 81,
+    "note": "",
+    "sortKey": "2026-10-080"
   }
 ]
